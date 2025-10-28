@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Donya Brewha - Whole in the Wall (Orders & Admin)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box}
+    body{font-family:'Poppins',sans-serif;margin:0;background:#fff9f6;color:#222}
+    header{background:#8B4513;color:#fff;text-align:center;padding:28px 12px}
+    header h1{margin:0;font-size:28px}
+    header p{margin:6px 0 0;font-style:italic}
+    .wrap{max-width:920px;margin:20px auto;padding:0 14px}
+    h2{color:#8B4513;margin:20px 0 8px}
+    .category{background:#fff;border-radius:10px;padding:12px;margin-bottom:14px;box-shadow:0 8px 24px rgba(0,0,0,0.04)}
+    .note{color:#6b6b6b;font-size:13px;margin-bottom:8px}
+    .item{display:flex;align-items:center;justify-content:space-between;padding:8px 6px;border-top:1px solid #f3f0ef}
+    .item:first-of-type{border-top:none}
+    .item .left{display:flex;flex-direction:column}
+    .price{font-weight:700}
+    .controls{display:flex;gap:8px;align-items:center}
+    .btn{background:#8B4513;color:#fff;border:0;padding:8px 10px;border-radius:8px;cursor:pointer}
+    .btn.small{padding:6px 8px;font-size:14px}
+    .btn.ghost{background:transparent;color:#8B4513;border:1px solid rgba(139,69,19,0.12)}
+    .floating-cart{position:fixed;left:0;right:0;bottom:12px;margin:0 auto;max-width:920px;padding:10px 14px;background:#fff;border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,0.12);display:flex;justify-content:space-between;align-items:center;gap:12px}
+    .cart-btn{background:#8B4513;color:#fff;border:0;padding:10px 14px;border-radius:8px;cursor:pointer}
+    .cart-count{background:#fff;color:#8B4513;border-radius:99px;padding:6px 10px;font-weight:700}
+    .cart-modal{position:fixed;left:12px;right:12px;bottom:76px;max-width:920px;margin:0 auto;background:#fff;border-radius:12px;padding:12px;box-shadow:0 18px 40px rgba(0,0,0,0.18);display:none}
+    .cart-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f3f0ef}
+    .cart-row:last-child{border-bottom:none}
+    .cart-actions{display:flex;gap:8px}
+    .total-row{display:flex;justify-content:space-between;padding-top:10px;font-weight:700}
+    .small{font-size:13px;color:#666}
+
+    /* admin styles */
+    .admin-panel{max-width:960px;margin:26px auto;padding:14px}
+    .admin-card{background:#fff;border-radius:10px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,0.04)}
+    .order-block{border:1px solid #f1ece8;padding:10px;border-radius:8px;margin-bottom:10px}
+    .order-meta{display:flex;justify-content:space-between;align-items:center}
+    .muted{color:#666;font-size:13px}
+
+    @media (max-width:640px){ header h1{font-size:22px} .floating-cart{padding:10px} }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Donya Brewha</h1>
+    <p>Whole in the Wall</p>
+  </header>
+
+  <main class="wrap" id="mainApp">
+    <div class="note">Tap <strong>Add</strong> to add item. Use <strong>Upsize</strong> to add an upsized version (Classics +₱20, Specials +₱25). Cart is always available at the bottom. <strong>Orders are received in the Admin page</strong>.</div>
+
+    <section id="menu"></section>
+  </main>
+
+  <!-- floating cart bar -->
+  <div class="floating-cart" id="floatingCart">
+    <div style="display:flex;gap:12px;align-items:center">
+      <div class="cart-count" id="cartCount">0</div>
+      <div>
+        <div class="small">Cart total</div>
+        <div id="cartTotal">₱0.00</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn ghost" id="viewCartBtn">View Cart</button>
+      <button class="cart-btn" id="checkoutBtn">Checkout (Send to Admin)</button>
+    </div>
+  </div>
+
+  <!-- cart modal -->
+  <div class="cart-modal" id="cartModal">
+    <h3>Your Cart</h3>
+    <div id="cartItems" style="max-height:360px;overflow:auto;margin-top:6px"></div>
+    <div class="total-row" style="margin-top:8px"><div>Total</div><div id="modalTotal">₱0.00</div></div>
+    <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn ghost" id="clearCartBtn">Clear</button>
+      <button class="btn" id="modalCheckoutBtn">Checkout (Send to Admin)</button>
+    </div>
+  </div>
+
+  <div id="adminView" style="display:none;" class="admin-panel">
+    <div class="admin-card">
+      <h2>Admin - Orders</h2>
+      <div id="adminControls"></div>
+      <div id="ordersList" style="margin-top:10px"></div>
+    </div>
+  </div>
+
+  <script>
+    // ---------- CONFIG ----------
+    const CLASSICS_UPSIZE = 20; // ₱20
+    const SPECIALS_UPSIZE = 25; // ₱25
+    const ADMIN_PASSWORD = 'password'; // provided admin password
+
+    // ---------- MENU DATA (individual prices) ----------
+    const MENU = [
+      {
+        category: 'DONYA CLASSICS', note: '₱39 (16oz). With or Without Coffee — Upsize (22oz) / ₱59', items: [
+          { id: 'c1', name: 'Kastila — Spanish Latte', price: 39 },
+          { id: 'c2', name: 'Karma — Caramel Macchiato', price: 39 },
+          { id: 'c3', name: 'Afam — Americano', price: 39 },
+          { id: 'c4', name: 'Dagat — Salted Caramel', price: 39 },
+          { id: 'c5', name: 'Maidla — Matcha', price: 39 },
+          { id: 'c6', name: 'Oreo — Cookies & Cream', price: 39 },
+          { id: 'c7', name: 'Berry Only — Strawberry', price: 39 },
+          { id: 'c8', name: 'Masungit — Mango', price: 39 },
+          { id: 'c9', name: 'Choco — Chocolate', price: 39 },
+          { id: 'c10', name: 'Brewlhaberry — Blueberry', price: 39 },
+          { id: 'c11', name: 'Berry Maidla — Strawberry Matcha', price: 39 },
+          { id: 'c12', name: 'Chocoberry — Choco Strawberry', price: 39 }
+        ]
+      },
+      {
+        category: 'DONYA SPECIALS', note: '₱49 (16oz). Add ₱25 for Upsize', items: [
+          { id: 's1', name: 'Biscoff — Regular', price: 49 },
+          { id: 's2', name: 'Biscoff — Overload', price: 69 },
+          { id: 's3', name: 'Pistachio — Regular', price: 49 },
+          { id: 's4', name: 'Pistachio — With Kofe', price: 69 },
+          { id: 's5', name: 'Nutella', price: 59 },
+          { id: 's6', name: 'Affogato Latte', price: 69 },
+          { id: 's7', name: 'Pink Drink', price: 49 },
+          { id: 's8', name: 'Taro', price: 49 },
+          { id: 's9', name: 'Avocado', price: 69 },
+          { id: 's10', name: 'Okinawa', price: 49 },
+          { id: 's11', name: 'Hokkaido', price: 49 }
+        ]
+      }
+    ];
+
+    // ---------- STATE ----------
+    // cart entries: {id, category, name, basePrice, upsized(bool), qty}
+    let cart = JSON.parse(localStorage.getItem('donya_cart')||'[]');
+    // orders stored in localStorage as an array
+    let orders = JSON.parse(localStorage.getItem('donya_orders')||'[]');
+    let adminLoggedIn = false;
+
+    // ---------- HELPERS ----------
+    const el = id => document.getElementById(id);
+    function format(n){ return '₱' + Number(n).toLocaleString('en-PH'); }
+
+    function calcItemPrice(entry){
+      const ups = entry.upsized ? (entry.category==='DONYA CLASSICS' ? CLASSICS_UPSIZE : SPECIALS_UPSIZE) : 0;
+      return (entry.basePrice + ups) * entry.qty;
+    }
+
+    function cartTotal(){ return cart.reduce((s,it)=>s+calcItemPrice(it),0); }
+
+    function saveCart(){ localStorage.setItem('donya_cart', JSON.stringify(cart)); }
+    function saveOrders(){ localStorage.setItem('donya_orders', JSON.stringify(orders)); }
+
+    // ---------- RENDER MENU ----------
+    function renderMenu(){
+      const menuEl = el('menu'); menuEl.innerHTML = '';
+      MENU.forEach((cat,ci)=>{
+        const c = document.createElement('div'); c.className='category';
+        const title = document.createElement('h2'); title.textContent = cat.category; c.appendChild(title);
+        if(cat.note){ const note = document.createElement('div'); note.className='note'; note.textContent = cat.note; c.appendChild(note); }
+        cat.items.forEach(it=>{
+          const row = document.createElement('div'); row.className='item';
+          const left = document.createElement('div'); left.className='left';
+          const name = document.createElement('div'); name.textContent = it.name; left.appendChild(name);
+          const price = document.createElement('div'); price.className='small price'; price.textContent = format(it.price); left.appendChild(price);
+          const controls = document.createElement('div'); controls.className='controls';
+          const addBtn = document.createElement('button'); addBtn.className='btn small'; addBtn.textContent='Add'; addBtn.onclick = ()=> addToCart(cat.category, it.id, it.name, it.price, false);
+          const upBtn = document.createElement('button'); upBtn.className='btn ghost small'; upBtn.textContent='Upsize'; upBtn.onclick = ()=> addToCart(cat.category, it.id, it.name, it.price, true);
+          controls.appendChild(addBtn); controls.appendChild(upBtn);
+          row.appendChild(left); row.appendChild(controls);
+          c.appendChild(row);
+        });
+        menuEl.appendChild(c);
+      });
+    }
+
+    // ---------- CART UI ----------
+    function renderCartUI(){
+      el('cartCount').textContent = cart.reduce((s,i)=>s+i.qty,0);
+      el('cartTotal').textContent = format(cartTotal());
+      el('modalTotal').textContent = format(cartTotal());
+      const itemsEl = el('cartItems'); itemsEl.innerHTML = '';
+      if(cart.length===0){ itemsEl.innerHTML = '<div class="small">Cart is empty</div>'; return; }
+      cart.forEach((it,idx)=>{
+        const row = document.createElement('div'); row.className='cart-row';
+        const left = document.createElement('div'); left.style.flex='1';
+        left.innerHTML = `<div style="font-weight:700">${escapeHtml(it.name)}${it.upsized? ' (Upsize)':''}</div><div class="small">${escapeHtml(it.category)}</div>`;
+        const right = document.createElement('div'); right.style.textAlign='right'; right.style.minWidth='170px';
+        right.innerHTML = `<div style="font-weight:700">${format(calcItemPrice(it))}</div>
+          <div style="margin-top:6px;display:flex;gap:8px;justify-content:flex-end;align-items:center">
+            <input type='number' min='1' value='${it.qty}' data-idx='${idx}' style='width:64px;padding:6px;border-radius:6px;border:1px solid #eee'>
+            <div class='cart-actions'>
+              <button class='btn ghost' data-action='toggleUps' data-idx='${idx}'>${it.upsized? 'Undo Upsize' : 'Toggle Upsize'}</button>
+              <button class='btn' data-action='remove' data-idx='${idx}'>Remove</button>
+            </div>
+          </div>`;
+        row.appendChild(left); row.appendChild(right); itemsEl.appendChild(row);
+      });
+
+      // wire inputs
+      itemsEl.querySelectorAll('input[type=number]').forEach(inp=>inp.addEventListener('change', e=>{
+        const i = Number(e.target.dataset.idx); const v = Math.max(1, Number(e.target.value)||1); cart[i].qty = v; saveCart(); renderCartUI();
+      }));
+      itemsEl.querySelectorAll('[data-action]').forEach(btn=>btn.addEventListener('click', e=>{
+        const idx = Number(e.target.dataset.idx);
+        const action = e.target.dataset.action;
+        if(action==='remove'){ cart.splice(idx,1); saveCart(); renderCartUI(); }
+        if(action==='toggleUps'){ cart[idx].upsized = !cart[idx].upsized; saveCart(); renderCartUI(); }
+      }));
+    }
+
+    // ---------- CART OPERATIONS ----------
+    function addToCart(category,id,name,basePrice,upsized){
+      // if same item with same upsized exists, increment qty
+      const existing = cart.find(c=>c.id===id && c.upsized===upsized);
+      if(existing){ existing.qty += 1; } else { cart.push({ id, category, name, basePrice, upsized: !!upsized, qty: 1 }); }
+      saveCart(); renderCartUI();
+      toast(name + (upsized? ' (Upsize)':'' ) + ' added');
+    }
+
+    function toast(msg){
+      // simple alert-free feedback
+      console.log(msg);
+    }
+
+    // ---------- CHECKOUT (Save to Admin Orders) ----------
+    function buildOrderObject(customerName){
+      const itemsCopy = cart.map(it=>({ ...it }));
+      return {
+        id: 'ord_' + Date.now(),
+        timestamp: new Date().toISOString(),
+        name: customerName,
+        items: itemsCopy,
+        total: cartTotal(),
+        status: 'new'
+      };
+    }
+
+    function sendOrderToAdmin(){
+      if(cart.length===0){ alert('Cart is empty. Please add items.'); return; }
+      const name = prompt('Enter your name to place the order:');
+      if(!name){ alert('Name is required.'); return; }
+      const order = buildOrderObject(name);
+      orders.unshift(order); // newest first
+      saveOrders();
+      // clear cart
+      cart = [];
+      saveCart(); renderCartUI();
+      alert('Order sent. Your order ID: ' + order.id + '\nPlease wait for confirmation from the admin.');
+      console.log('Order saved to admin orders:', order);
+    }
+
+    // ---------- ADMIN UI & AUTH ----------
+    function showAdminView(){
+      document.getElementById('mainApp').style.display = 'none';
+      document.getElementById('floatingCart').style.display = 'none';
+      el('adminView').style.display = 'block';
+      renderAdminControls();
+      renderOrdersList();
+    }
+
+    function showCustomerView(){
+      document.getElementById('mainApp').style.display = 'block';
+      document.getElementById('floatingCart').style.display = 'flex';
+      el('adminView').style.display = 'none';
+    }
+
+    function renderAdminControls(){
+      const ac = el('adminControls'); ac.innerHTML = '';
+      if(!adminLoggedIn){
+        ac.innerHTML = `<div style="display:flex;gap:8px;align-items:center"><input type='password' id='adminPass' placeholder='Admin password' style='padding:8px;border-radius:6px;border:1px solid #eee'><button class='btn' id='adminLoginBtn'>Login</button><button class='btn ghost' id='backToShop'>Back to Shop</button></div>`;
+        el('adminLoginBtn').addEventListener('click', ()=>{
+          const p = el('adminPass').value;
+          if(p === ADMIN_PASSWORD){ adminLoggedIn = true; renderAdminControls(); renderOrdersList(); } else { alert('Incorrect password'); }
+        });
+        el('backToShop').addEventListener('click', ()=>{ window.location.hash = ''; showCustomerView(); });
+      } else {
+        ac.innerHTML = `<div style="display:flex;gap:8px;align-items:center"><div class='muted'>Logged in as admin</div><button class='btn' id='adminLogoutBtn'>Logout</button><button class='btn ghost' id='clearAllOrders'>Clear All Orders</button><button class='btn ghost' id='backToShop2'>Back to Shop</button></div>`;
+        el('adminLogoutBtn').addEventListener('click', ()=>{ adminLoggedIn = false; renderAdminControls(); });
+        el('clearAllOrders').addEventListener('click', ()=>{ if(confirm('Delete ALL orders?')){ orders = []; saveOrders(); renderOrdersList(); } });
+        el('backToShop2').addEventListener('click', ()=>{ window.location.hash = ''; showCustomerView(); });
+      }
+    }
+
+    function renderOrdersList(){
+      const list = el('ordersList'); list.innerHTML = '';
+      if(orders.length===0){ list.innerHTML = '<div class="small">No orders yet.</div>'; return; }
+      orders.forEach((ord, idx)=>{
+        const ob = document.createElement('div'); ob.className='order-block';
+        ob.innerHTML = `<div class='order-meta'><div><strong>Order ${escapeHtml(ord.id)}</strong> — <span class='muted'>${new Date(ord.timestamp).toLocaleString()}</span></div><div><strong>${format(ord.total)}</strong></div></div>`;
+        const body = document.createElement('div'); body.style.marginTop='8px';
+        body.innerHTML = `<div><strong>Customer:</strong> ${escapeHtml(ord.name)}</div><div style='margin-top:6px'><strong>Items:</strong></div>`;
+        const itemList = document.createElement('div'); itemList.style.marginTop='6px';
+        ord.items.forEach(it=>{
+          const upsTxt = it.upsized ? ' (Upsize)' : '';
+          const unit = it.basePrice + (it.upsized ? (it.category==='DONYA CLASSICS'? CLASSICS_UPSIZE : SPECIALS_UPSIZE) : 0);
+          const row = document.createElement('div'); row.className='small'; row.textContent = `${it.qty} x ${it.name}${upsTxt} — ₱${unit} each = ₱${unit * it.qty}`;
+          itemList.appendChild(row);
+        });
+        body.appendChild(itemList);
+        body.innerHTML += `<div style='margin-top:8px;display:flex;gap:8px;justify-content:flex-end'><div class='muted'>Status: ${escapeHtml(ord.status)}</div></div>`;
+        ob.appendChild(body);
+
+        // actions (only when logged in)
+        if(adminLoggedIn){
+          const actions = document.createElement('div'); actions.style.marginTop='8px'; actions.style.display='flex'; actions.style.justifyContent='flex-end'; actions.style.gap='8px';
+          const markBtn = document.createElement('button'); markBtn.className='btn ghost'; markBtn.textContent = ord.status === 'new' ? 'Mark In-Progress' : (ord.status === 'in-progress' ? 'Mark Ready' : 'Mark New');
+          markBtn.addEventListener('click', ()=>{
+            if(ord.status === 'new') ord.status = 'in-progress'; else if(ord.status === 'in-progress') ord.status = 'ready'; else ord.status = 'new';
+            saveOrders(); renderOrdersList();
+          });
+          const delBtn = document.createElement('button'); delBtn.className='btn'; delBtn.textContent = 'Delete'; delBtn.addEventListener('click', ()=>{ if(confirm('Delete this order?')){ orders.splice(idx,1); saveOrders(); renderOrdersList(); } });
+          actions.appendChild(markBtn); actions.appendChild(delBtn);
+          ob.appendChild(actions);
+        }
+
+        list.appendChild(ob);
+      });
+    }
+
+    // ---------- ROUTING ----------
+    function handleHash(){
+      if(window.location.hash === '#admin'){
+        showAdminView();
+      } else {
+        showCustomerView();
+      }
+    }
+
+    // ---------- INIT ----------
+    function escapeHtml(s){ return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    // events wiring
+    el('viewCartBtn').addEventListener('click', ()=>{ el('cartModal').style.display = el('cartModal').style.display === 'block' ? 'none' : 'block'; renderCartUI(); });
+    el('checkoutBtn').addEventListener('click', sendOrderToAdmin);
+    el('modalCheckoutBtn').addEventListener('click', sendOrderToAdmin);
+    el('clearCartBtn').addEventListener('click', ()=>{ if(confirm('Clear cart?')){ cart = []; saveCart(); renderCartUI(); } });
+
+    // close modal when clicking outside (simple)
+    window.addEventListener('click', e=>{ const modal = el('cartModal'); if(!modal) return; if(e.target !== modal && !modal.contains(e.target) && e.target.id !== 'viewCartBtn' && !e.target.closest('.floating-cart')){ modal.style.display = 'none'; } });
+
+    // simple hash change handling
+    window.addEventListener('hashchange', ()=>{ handleHash(); });
+
+    // initial render
+    renderMenu(); renderCartUI(); handleHash();
+
+  </script>
+</body>
+</html>
