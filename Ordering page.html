@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<title>Donya Brewha — Order</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box}body{font-family:'Poppins',sans-serif;margin:0;background:#fff9f6;color:#222}
+header{background:#8B4513;color:#fff;text-align:center;padding:28px 12px}header h1{margin:0;font-size:28px}header p{margin:6px 0 0;font-style:italic}
+.wrap{max-width:920px;margin:20px auto;padding:0 14px}h2{color:#8B4513;margin:20px 0 8px}.category{background:#fff;border-radius:10px;padding:12px;margin-bottom:14px;box-shadow:0 8px 24px rgba(0,0,0,0.04)}
+.note{color:#6b6b6b;font-size:13px;margin-bottom:8px}.item{display:flex;align-items:center;justify-content:space-between;padding:8px 6px;border-top:1px solid #f3f0ef}.item:first-of-type{border-top:none}.item .left{display:flex;flex-direction:column}.price{font-weight:700}.controls{display:flex;gap:8px;align-items:center}.btn{background:#8B4513;color:#fff;border:0;padding:8px 10px;border-radius:8px;cursor:pointer}.btn.small{padding:6px 8px;font-size:14px}.btn.ghost{background:transparent;color:#8B4513;border:1px solid rgba(139,69,19,0.12)}.floating-cart{position:fixed;left:0;right:0;bottom:12px;margin:0 auto;max-width:920px;padding:10px 14px;background:#fff;border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,0.12);display:flex;justify-content:space-between;align-items:center;gap:12px}.cart-btn{background:#8B4513;color:#fff;border:0;padding:10px 14px;border-radius:8px;cursor:pointer}.cart-count{background:#fff;color:#8B4513;border-radius:99px;padding:6px 10px;font-weight:700}.cart-modal{z-index:99999;position:fixed;left:12px;right:12px;bottom:76px;max-width:920px;margin:0 auto;background:#fff;border-radius:12px;padding:12px;box-shadow:0 18px 40px rgba(0,0,0,0.18);display:none}.cart-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f3f0ef}.cart-row:last-child{border-bottom:none}.cart-actions{display:flex;gap:8px}.total-row{display:flex;justify-content:space-between;padding-top:10px;font-weight:700}.small{font-size:13px;color:#666}
+
+/* bottom slide modal */
+.bottom-modal {
+  position: fixed;
+  left: 0; right: 0;
+  bottom: -100%;
+  background: #fff;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  box-shadow: 0 -18px 40px rgba(0,0,0,0.18);
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 16px;
+  transition: bottom .28s ease-in-out;
+  z-index: 100000; /* ensure above cart modal */
+}
+.bottom-modal.open {
+  bottom: 92px; /* lifted above floating cart */
+}
+.option-row{display:flex;align-items:center;justify-content:space-between;padding:8px 6px;border-bottom:1px solid #f3f0ef}.option-row:last-child{border-bottom:none}
+.qty-row{display:flex;gap:8px;align-items:center;margin-top:10px}
+.badge{background:#fff9ef;color:#8B4513;padding:6px 8px;border-radius:8px;border:1px solid rgba(139,69,19,0.06);font-weight:700}
+
+/* responsive */
+@media (max-width:640px){ header h1{font-size:22px} .floating-cart{padding:10px} .bottom-modal {
+  position: fixed;
+  left: 0; right: 0;
+  bottom: -100%;
+  background: #fff;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  box-shadow: 0 -18px 40px rgba(0,0,0,0.18);
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 16px;
+  transition: bottom .28s ease-in-out;
+  z-index: 100000; /* ensure above cart modal */
+} }
+main.wrap{padding-bottom:240px;}
+</style>
+</head>
+<body>
+<header>
+<h1>Donya Brewha</h1>
+<p>Hole in the Wall</p>
+</header>
+<main class="wrap" id="mainApp">
+<div class="note">Tap <strong>Add</strong> to add item. Drinks have Upsize option. Cart is always available at the bottom.</div>
+<section id="menu"></section>
+</main>
+<!-- floating cart bar -->
+<div class="floating-cart" id="floatingCart">
+<div style="display:flex;gap:12px;align-items:center">
+<div class="cart-count" id="cartCount">0</div>
+<div>
+<div class="small">Cart total</div>
+<div id="cartTotal">₱0.00</div>
+</div>
+</div>
+<div style="display:flex;gap:8px;align-items:center">
+<button class="btn ghost" id="viewCartBtn">View Cart</button>
+<button class="cart-btn" id="checkoutBtn">Checkout (Send to Admin)</button>
+</div>
+</div>
+<!-- cart modal -->
+<div class="cart-modal" id="cartModal">
+<h3>Your Cart</h3>
+<div id="cartItems" style="max-height:360px;overflow:auto;margin-top:6px"></div>
+<div class="total-row" style="margin-top:8px"><div>Total</div><div id="modalTotal">₱0.00</div></div>
+<div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end">
+<button class="btn ghost" id="clearCartBtn">Clear</button>
+<button class="btn" id="modalCheckoutBtn">Checkout (Send to Admin)</button>
+</div>
+</div>
+<!-- bottom slide-up modal for item options -->
+<div aria-hidden="true" class="bottom-modal" id="itemModal">
+<h3 id="modalTitle"></h3>
+<div class="small" id="modalDesc" style="margin-bottom:8px"></div>
+<div id="modalOptions" style="max-height:260px;overflow:auto"></div>
+<div class="qty-row">
+<div class="small">Quantity</div>
+<input id="modalQty" min="1" style="width:80px;padding:8px;border-radius:8px;border:1px solid #eee;margin-left:8px" type="number" value="1"/>
+<div style="flex:1"></div>
+<div class="badge" id="modalPrice">₱0.00</div>
+</div>
+<div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
+<button class="btn ghost" id="modalCancel">Cancel</button>
+<button class="btn" id="modalAdd">Add to Cart</button>
+</div>
+</div>
+
+<script type="module">
+// Firebase imports
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-database.js";
+
+const CLASSICS_UPSIZE = 20;
+const SPECIALS_UPSIZE = 25;
+
+// firebase config (keeps original keys)
+const firebaseConfig = {
+  apiKey: "AIzaSyDOxE08S7aH45Zz7kP4CvddDCV3TNOGrcU",
+  authDomain: "donya-brewha.firebaseapp.com",
+  databaseURL: "https://donya-brewha-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "donya-brewha",
+  storageBucket: "donya-brewha.firebasedomain.app",
+  messagingSenderId: "936522258681",
+  appId: "1:936522258681:web:0b24c708689ca3acfaea28",
+  measurementId: "G-WXHXR5K0H9"
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// ---------- FULL MENU DATA (complete) ----------
+const MENU = [
+  {
+    category: 'DONYA CLASSICS', note: '₱39 (16oz). With or Without Coffee — Upsize (22oz) / ₱59', items: [
+      { id: 'c1', name: 'Kastila — Spanish Latte', price: 39, type:'classic' },
+      { id: 'c2', name: 'Karma — Caramel Macchiato', price: 39, type:'classic' },
+      { id: 'c3', name: 'Afam — Americano', price: 39, type:'classic' },
+      { id: 'c4', name: 'Dagat — Salted Caramel', price: 39, type:'classic' },
+      { id: 'c5', name: 'Maidla — Matcha', price: 39, type:'classic' },
+      { id: 'c6', name: 'Oreo — Cookies & Cream', price: 39, type:'classic' },
+      { id: 'c7', name: 'Berry Only — Strawberry', price: 39, type:'classic' },
+      { id: 'c8', name: 'Masungit — Mango', price: 39, type:'classic' },
+      { id: 'c9', name: 'Choco — Chocolate', price: 39, type:'classic' },
+      { id: 'c10', name: 'Brewlhaberry — Blueberry', price: 39, type:'classic' },
+      { id: 'c11', name: 'Berry Maidla — Strawberry Matcha', price: 39, type:'classic' },
+      { id: 'c12', name: 'Chocoberry — Choco Strawberry', price: 39, type:'classic' }
+    ]
+  },
+  {
+    category: 'DONYA SPECIALS', note: '₱49 (16oz). Add ₱25 for Upsize', items: [
+      { id: 's1', name: 'Biscoff — Regular', price: 49, type:'special' },
+      { id: 's2', name: 'Biscoff — Overload', price: 69, type:'special' },
+      { id: 's3', name: 'Pistachio — Regular', price: 49, type:'special' },
+      { id: 's4', name: 'Pistachio — With Kofe', price: 69, type:'special' },
+      { id: 's5', name: 'Nutella', price: 59, type:'special' },
+      { id: 's6', name: 'Affogato Latte', price: 69, type:'special' },
+      { id: 's7', name: 'Pink Drink', price: 49, type:'special' },
+      { id: 's8', name: 'Taro', price: 49, type:'special' },
+      { id: 's9', name: 'Avocado', price: 69, type:'special' },
+      { id: 's10', name: 'Okinawa', price: 49, type:'special' },
+      { id: 's11', name: 'Hokkaido', price: 49, type:'special' }
+    ]
+  },
+  {
+    category: 'DONYA BREWHA DUO DRINKS', note: '₱69–₱79', items: [
+      { id: 'd1', name: 'Oreo Matcha – ₱69', price: 69 },
+      { id: 'd2', name: 'Biscoff Choco – ₱69', price: 69 },
+      { id: 'd3', name: 'Biscoff Matcha – ₱69', price: 69 },
+      { id: 'd4', name: 'Choco Matcha – ₱69', price: 69 },
+      { id: 'd5', name: 'Taro Strawberry – ₱69', price: 69 },
+      { id: 'd6', name: 'Pistachio Choco – ₱79', price: 79 }
+    ]
+  },
+  // Foods
+  {
+    category: 'PANCIT CANTON', note: '₱35 — Flavors & Add-ons available', items: [
+      { id: 'f_pancit', name: 'Pancit Canton – P35.00', price: 35, options: {
+          flavors: { type:'radio', title:'Flavors', choices: [{k:'Kalamansi'},{k:'Chilimansi'},{k:'Sweet & Spicy'},{k:'Extra Hot Chili'}]},
+          addons: { type:'checkbox', title:'Add-ons', choices: [{k:'Boiled Egg',p:15},{k:'Hotdog',p:15}]}
+        }
+      }
+    ]
+  },
+  {
+    category: 'DONYA BREWHA CHICKEN CORNER', note: 'With dipping sauce', items: [
+      { id: 'f_nug6', name: 'Chicken Nuggets (with dipping sauce) — 6 pcs', price: 75, options: { sauces:{type:'checkbox', title:'Dipping Sauce', choices:[{k:'Cheese'},{k:'Honey Butter'},{k:'BBQ'},{k:'Honey Mustard'}]}}},
+      { id: 'f_nug12', name: 'Chicken Nuggets (with dipping sauce) — 1 dozen', price: 135, options: { sauces:{type:'checkbox', title:'Dipping Sauce', choices:[{k:'Cheese'},{k:'Honey Butter'},{k:'BBQ'},{k:'Honey Mustard'}]}}},
+      { id: 'f_nug_rice', name: 'Chicken Nuggets (Rice Meal)', price: 99, options: { sauces:{type:'checkbox', title:'Dipping Sauce', choices:[{k:'Cheese'},{k:'Honey Butter'},{k:'BBQ'},{k:'Honey Mustard'}]}}},
+      { id: 'f_pops_solo', name: 'Chicken Pops (with dipping sauce) — Solo', price: 85, options: { sauces:{type:'checkbox', title:'Dipping Sauce', choices:[{k:'Cheese'},{k:'Honey Butter'},{k:'BBQ'},{k:'Honey Mustard'}]}}},
+      { id: 'f_pops_duo', name: 'Chicken Pops (with dipping sauce) — Duo', price: 170, options: { sauces:{type:'checkbox', title:'Dipping Sauce', choices:[{k:'Cheese'},{k:'Honey Butter'},{k:'BBQ'},{k:'Honey Mustard'}]}}},
+      { id: 'f_pops_rice', name: 'Chicken Pops (Rice Meal)', price: 99, options: { sauces:{type:'checkbox', title:'Dipping Sauce', choices:[{k:'Cheese'},{k:'Honey Butter'},{k:'BBQ'},{k:'Honey Mustard'}]}}},
+      { id: 'f_burger_reg', name: 'Chicken Burger (with dipping sauce) — Regular', price: 80, options: { sauces:{type:'checkbox', title:'Dipping Sauce', choices:[{k:'Cheese'},{k:'Honey Butter'},{k:'BBQ'},{k:'Honey Mustard'}]}}},
+      { id: 'f_burger_c', name: 'Chicken Burger (with dipping sauce) — With Cheese', price: 90, options: { sauces:{type:'checkbox', title:'Dipping Sauce', choices:[{k:'Cheese'},{k:'Honey Butter'},{k:'BBQ'},{k:'Honey Mustard'}]}}},
+      { id: 'f_fillet_share', name: 'Chicken Fillet (with dipping sauce) — Sharing', price: 150, options: { sauces:{type:'checkbox', title:'Dipping Sauce', choices:[{k:'Cheese'},{k:'Honey Butter'},{k:'BBQ'},{k:'Honey Mustard'}]}}},
+      { id: 'f_fillet_rice', name: 'Chicken Fillet (with dipping sauce) — Rice Meal', price: 85, options: { sauces:{type:'checkbox', title:'Dipping Sauce', choices:[{k:'Cheese'},{k:'Honey Butter'},{k:'BBQ'},{k:'Honey Mustard'}]}}},
+      { id: 'f_combo', name: 'Nuggets/Pops/Fillet & Fries (with dipping sauce)', price: 120, options: { sauces:{type:'checkbox', title:'Dipping Sauce', choices:[{k:'Cheese'},{k:'Honey Butter'},{k:'BBQ'},{k:'Honey Mustard'}]}}}
+    ]
+  },
+  {
+    category: 'MT. MUSUBI', note: '', items: [
+      { id: 'f_musubi_sun', name: 'Sunrise Musubi', price: 55, options:{ dipons:{type:'checkbox', title:'Dip-ons', choices:[{k:'Pinefire Mayo',p:20},{k:'Sweet Drip Glaze',p:10}]}}},
+      { id: 'f_musubi_og', name: 'OG Glaze Musubi', price: 45, options:{ dipons:{type:'checkbox', title:'Dip-ons', choices:[{k:'Pinefire Mayo',p:20},{k:'Sweet Drip Glaze',p:10}]}}}
+    ]
+  },
+  {
+    category: 'GRAHAM BAR', note: 'Best Seller — ₱40 / 2IN1 — ₱50', items: [
+      { id: 'f_graham_mango', name: 'Graham Bar — Mango', price: 40},
+      { id: 'f_graham_oreo', name: 'Graham Bar — Cookies n’ Cream', price: 40},
+      { id: 'f_graham_classic', name: 'Graham Bar — Classic', price: 40},
+      { id: 'f_graham_ube', name: 'Graham Bar — Ube', price: 40},
+      { id: 'f_graham_cheese', name: 'Graham Bar — Cheese', price: 40},
+      { id: 'f_graham_2in1', name: 'Graham Bar — 2IN1 Ube-Cheese', price: 50}
+    ]
+  },
+  {
+    category: 'FLAVORED CHICKEN WINGS', note: 'Flavors available — Prices: Meal ₱99 / 6 pcs ₱149 / 12 pcs ₱299', items: [
+      { id: 'f_wings_meal', name: 'Flavored Wings — Meal', price: 99, options:{flavors:{type:'radio',title:'Flavors',choices:[{k:'Garlic Parmesan'},{k:'Honey Butter'},{k:'Barbeque'},{k:'Honey Mustard'},{k:'Soy Garlic'},{k:'Buffalo Wings'},{k:'Buttered Chicken'}]}}},
+      { id: 'f_wings_6', name: 'Flavored Wings — 6 pcs', price: 149, options:{flavors:{type:'radio',title:'Flavors',choices:[{k:'Garlic Parmesan'},{k:'Honey Butter'},{k:'Barbeque'},{k:'Honey Mustard'},{k:'Soy Garlic'},{k:'Buffalo Wings'},{k:'Buttered Chicken'}]}}},
+      { id: 'f_wings_12', name: 'Flavored Wings — 12 pcs', price: 299, options:{flavors:{type:'radio',title:'Flavors',choices:[{k:'Garlic Parmesan'},{k:'Honey Butter'},{k:'Barbeque'},{k:'Honey Mustard'},{k:'Soy Garlic'},{k:'Buffalo Wings'},{k:'Buttered Chicken'}]}}}
+    ]
+  }
+];
+
+// ---------- STATE
+let cart = JSON.parse(localStorage.getItem('donya_cart')||'[]');
+
+// ---------- HELPERS
+const el = id => document.getElementById(id);
+function format(n){ return '₱' + Number(n).toLocaleString('en-PH'); }
+
+function calcItemPrice(entry){
+  const ups = entry.upsized ? (entry.type==='classic' ? CLASSICS_UPSIZE : (entry.type==='special'? SPECIALS_UPSIZE : 0)) : 0;
+  const addonSum = (entry.addons||[]).reduce((s,a)=>s + (a.p||0), 0);
+  return (entry.basePrice + ups + addonSum) * entry.qty;
+}
+
+function cartTotal(){ return cart.reduce((s,it)=>s+calcItemPrice(it),0); }
+function saveCart(){ localStorage.setItem('donya_cart', JSON.stringify(cart)); }
+
+// ---------- RENDER MENU
+function renderMenu(){
+  const menuEl = el('menu'); menuEl.innerHTML = '';
+  MENU.forEach(cat=>{
+    const c = document.createElement('div'); c.className='category';
+    const title = document.createElement('h2'); title.textContent = cat.category; c.appendChild(title);
+    if(cat.note){ const note = document.createElement('div'); note.className='note'; note.textContent = cat.note; c.appendChild(note); }
+    cat.items.forEach(it=>{
+      const row = document.createElement('div'); row.className='item';
+      const left = document.createElement('div'); left.className='left';
+      const name = document.createElement('div'); name.textContent = it.name; left.appendChild(name);
+      const price = document.createElement('div'); price.className='small price'; price.textContent = format(it.price); left.appendChild(price);
+      const controls = document.createElement('div'); controls.className='controls';
+      const addBtn = document.createElement('button'); addBtn.className='btn small'; addBtn.textContent='Add';
+      addBtn.onclick = ()=> { openItemModal(it, null); };
+      controls.appendChild(addBtn);
+      if(it.type === 'classic' || it.type === 'special'){
+        const upBtn = document.createElement('button'); upBtn.className='btn ghost small'; upBtn.textContent='Upsize';
+        upBtn.onclick = ()=> { addToCartSimple(it, true); };
+        controls.appendChild(upBtn);
+      }
+      row.appendChild(left); row.appendChild(controls); c.appendChild(row);
+    });
+    menuEl.appendChild(c);
+  });
+}
+
+// simple add for items (drinks or foods without options)
+// we now open modal for add as well to keep button behavior consistent
+function addToCartSimple(it, upsized){
+  const entry = { id: it.id, name: it.name, basePrice: it.price, qty: 1, addons: [], upsized: !!upsized, type: it.type || '' };
+  cart.push(entry);
+  saveCart(); renderCartUI();
+}
+
+// ---------- ITEM MODAL (bottom slide-up)
+const itemModal = el('itemModal');
+const modalTitle = el('modalTitle');
+const modalDesc = el('modalDesc');
+const modalOptions = el('modalOptions');
+const modalQty = el('modalQty');
+const modalPrice = el('modalPrice');
+const modalAddBtn = el('modalAdd');
+let modalCurrent = null;
+let editingIndex = null;
+
+function openItemModal(it, index = null){
+  modalCurrent = it;
+  editingIndex = (index !== null) ? Number(index) : null;
+  modalTitle.textContent = index !== null ? it.name + ' (Edit)' : it.name;
+  modalDesc.textContent = it.options && it.options.flavors ? 'Please select flavor & add-ons' : (it.options ? 'Select options' : '');
+  modalOptions.innerHTML = '';
+  // build options UI
+  if(it.options){
+    // when editing, pre-check based on cart[index].addons
+    const preSelected = (editingIndex!==null && cart[editingIndex]) ? (cart[editingIndex].addons||[]) : [];
+    Object.keys(it.options).forEach(key=>{
+      const opt = it.options[key];
+      const section = document.createElement('div');
+      section.innerHTML = `<div style="font-weight:700;margin-top:8px">${opt.title || key}</div>`;
+      const list = document.createElement('div');
+      (opt.choices||[]).forEach((choice, idx)=>{
+        const id = 'opt_' + it.id + '_' + key + '_' + idx;
+        const row = document.createElement('div'); row.className='option-row';
+        const left = document.createElement('div'); left.textContent = choice.k + (choice.p ? ' +₱' + choice.p : '');
+        const right = document.createElement('div');
+        let checked = false;
+        if(preSelected.length){
+          checked = preSelected.some(a=>a.k === choice.k);
+        }
+        if(opt.type === 'checkbox'){
+          right.innerHTML = `<input type="checkbox" ${checked? 'checked':''} data-key="${key}" data-idx="${idx}" data-price="${choice.p||0}" id="${id}">`;
+        } else {
+          right.innerHTML = `<input type="radio" name="${it.id}_${key}" ${checked? 'checked':''} data-key="${key}" data-idx="${idx}" data-price="${choice.p||0}" id="${id}">`;
+        }
+        row.appendChild(left); row.appendChild(right); list.appendChild(row);
+      });
+      section.appendChild(list);
+      modalOptions.appendChild(section);
+    });
+  }
+  // quantity
+  modalQty.value = (editingIndex!==null && cart[editingIndex]) ? cart[editingIndex].qty : 1;
+  // button label
+  modalAddBtn.textContent = editingIndex!==null ? 'Save Changes' : 'Add to Cart';
+  updateModalPrice();
+  itemModal.classList.add('open');
+  itemModal.setAttribute('aria-hidden','false');
+}
+
+// close
+function closeItemModal(){ itemModal.classList.remove('open'); itemModal.setAttribute('aria-hidden','true'); modalCurrent = null; editingIndex = null; modalAddBtn.textContent = 'Add to Cart'; }
+
+// update price display
+function updateModalPrice(){
+  if(!modalCurrent) return;
+  const base = modalCurrent.price || 0;
+  const inputs = modalOptions.querySelectorAll('input');
+  let add = 0;
+  inputs.forEach(i=>{ if(i.checked) add += Number(i.dataset.price||0); });
+  const qty = Math.max(1, Number(modalQty.value)||1);
+  modalPrice.textContent = format((base + add) * qty);
+}
+
+modalOptions.addEventListener('change', updateModalPrice);
+modalQty.addEventListener('change', updateModalPrice);
+
+el('modalCancel').addEventListener('click', ()=>{ closeItemModal(); });
+
+// handle Add / Save button centrally
+modalAddBtn.addEventListener('click', ()=>{
+  if(!modalCurrent) return;
+  const qty = Math.max(1, Number(modalQty.value)||1);
+  // gather selected addons
+  const inputs = modalOptions.querySelectorAll('input');
+  const selected = [];
+  inputs.forEach(i=>{
+    if(i.checked){
+      const key = i.dataset.key;
+      const idx = Number(i.dataset.idx);
+      const choice = modalCurrent.options?.[key]?.choices[idx];
+      if(choice) selected.push({ k: choice.k, p: choice.p||0 });
+    }
+  });
+  if(editingIndex!==null){
+    // update existing cart item
+    cart[editingIndex] = { id: modalCurrent.id, name: modalCurrent.name, basePrice: modalCurrent.price, qty, addons: selected, upsized:false, type: modalCurrent.type || '' };
+    saveCart(); renderCartUI(); closeItemModal();
+  } else {
+    // add new
+    const entry = { id: modalCurrent.id, name: modalCurrent.name, basePrice: modalCurrent.price, qty, addons: selected, upsized:false, type: modalCurrent.type || '' };
+    cart.push(entry);
+    saveCart(); renderCartUI(); closeItemModal();
+  }
+});
+
+// ---------- CART UI
+function escapeHtml(text) {
+  if (!text) return '';
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function renderCartUI(){
+  el('cartCount').textContent = cart.reduce((s,i)=>s+i.qty,0);
+  el('cartTotal').textContent = format(cartTotal());
+  el('modalTotal').textContent = format(cartTotal());
+  const itemsEl = el('cartItems'); itemsEl.innerHTML = '';
+  if(cart.length===0){ itemsEl.innerHTML = '<div class="small">Cart is empty</div>'; return; }
+  cart.forEach((it,idx)=>{
+    const row = document.createElement('div'); row.className='cart-row';
+    const left = document.createElement('div'); left.style.flex='1';
+    const addonText = (it.addons||[]).map(a=>a.k + (a.p ? ' +₱' + a.p : '')).join(', ');
+    const upsText = it.upsized ? ' (Upsize)' : '';
+    left.innerHTML = `<div style="font-weight:700">${escapeHtml(it.name)}${upsText}</div><div class="small">${addonText}</div>`;
+    const right = document.createElement('div'); right.style.textAlign='right'; right.style.minWidth='170px';
+    right.innerHTML = `<div style="font-weight:700">${format(calcItemPrice(it))}</div>
+      <div style="margin-top:6px;display:flex;gap:8px;justify-content:flex-end;align-items:center">
+        <input type='number' min='1' value='${it.qty}' data-idx='${idx}' style='width:64px;padding:6px;border-radius:6px;border:1px solid #eee'>
+        <div class='cart-actions'>
+          <button class='btn ghost' data-action='edit' data-idx='${idx}'>Edit</button>
+          <button class='btn' data-action='remove' data-idx='${idx}'>Remove</button>
+        </div>
+      </div>`;
+    row.appendChild(left); row.appendChild(right); itemsEl.appendChild(row);
+  });
+  itemsEl.querySelectorAll('input[type=number]').forEach(inp=>inp.addEventListener('change', e=>{
+    const i = Number(e.target.dataset.idx); const v = Math.max(1, Number(e.target.value)||1); cart[i].qty = v; saveCart(); renderCartUI();
+  }));
+  itemsEl.querySelectorAll('[data-action]').forEach(btn=>btn.addEventListener('click', e=>{
+    const idx = Number(e.target.dataset.idx);
+    const action = e.target.dataset.action;
+    if(action==='remove'){ cart.splice(idx,1); saveCart(); renderCartUI(); }
+    if(action==='edit'){ openEditModal(idx); }
+  }));
+}
+
+// edit existing cart item (reopen modal)
+function openEditModal(idx){
+  const it = cart[idx];
+  const original = MENU.flatMap(c=>c.items).find(x=>x.id === it.id);
+  if(!original){ alert('Original item not found'); return; }
+  openItemModal(original, idx);
+}
+
+// ---------- CHECKOUT (Send to Firebase) ----------
+function buildOrderObject(customerName){
+  const itemsCopy = cart.map(it=>({ ...it }));
+  return {
+    timestamp: new Date().toISOString(),
+    name: customerName,
+    items: itemsCopy,
+    total: cartTotal(),
+    status: 'new'
+  };
+}
+
+function sendOrderToFirebase(customerName){
+  if(cart.length===0){ alert('Cart is empty. Please add items.'); return; }
+  const order = buildOrderObject(customerName);
+  push(ref(db, 'orders/'), order)
+    .then(()=>{
+      alert('Order sent. Your order ID will be visible to admin.');
+      cart = []; saveCart(); renderCartUI();
+    })
+    .catch(err=>{ alert('Error sending order: ' + err.message); });
+}
+
+// ---------- UX wiring
+el('viewCartBtn').addEventListener('click', ()=>{ const cartModal = el('cartModal'); cartModal.style.display = 'block'; cartModal.scrollIntoView({behavior:'smooth', block:'center'}); renderCartUI(); });
+el('checkoutBtn').addEventListener('click', ()=>{
+  const name = prompt('Enter your name to place the order:');
+  if(!name) { alert('Name is required.'); return; }
+  sendOrderToFirebase(name);
+});
+el('modalCheckoutBtn')?.addEventListener('click', ()=>{
+  const name = prompt('Enter your name to place the order:');
+  if(!name) { alert('Name is required.'); return; }
+  sendOrderToFirebase(name);
+});
+el('clearCartBtn').addEventListener('click', ()=>{ if(confirm('Clear cart?')){ cart = []; saveCart(); renderCartUI(); } });
+
+// close modal when clicking outside (simple)
+window.addEventListener('click', e=>{ const modal = el('cartModal'); if(!modal) return; if(e.target !== modal && !modal.contains(e.target) && e.target.id !== 'viewCartBtn' && !e.target.closest('.floating-cart')){ modal.style.display = 'none'; } });
+document.addEventListener('click', (e)=>{ if(itemModal && itemModal.contains(e.target)) e.stopPropagation(); });
+
+// init
+renderMenu(); renderCartUI();
+
+</script>
+</body>
+</html>
